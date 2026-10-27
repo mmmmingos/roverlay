@@ -1,7 +1,7 @@
 """Voice memory: what Roverlay has seen in each chat, as one plain-text Markdown file per contact.
 
-Documents\\Roverlay\\voice\\<app>\\<contact>.md. Each line says who wrote it: **Me**, the other person's name, or
-**unsure** when the app gave no reliable way to tell. Files are meant to be opened, read, edited and deleted by
+Documents\\Roverlay\\voice\\<app>\\<contact>.md. Each line says who wrote it: **Me** or the other person's name.
+Chats where the app gives no reliable way to tell aren't saved. Files are meant to be opened, read, edited and deleted by
 the user. Only the newest MAX_LINES are kept per contact. Drafting reads the user's own past lines back as tone
 examples for that person.
 """
@@ -13,8 +13,8 @@ from .config import MEMORY_DIR
 
 MAX_LINES = 200
 LINE = re.compile(r"^- (\d{4}-\d{2}-\d{2}) · \*\*(.+?):\*\* (.*)$")
-HEADER = ("Messages Roverlay has seen in this chat, oldest first. **Me** is you; **unsure** means the app gave no "
-          "reliable way to tell who wrote it. Edit or delete anything; Roverlay only adds to the end.\n")
+HEADER = ("Messages Roverlay has seen in this chat, oldest first. **Me** is you. "
+          "Edit or delete anything; Roverlay only adds to the end.\n")
 
 
 def _safe(name):
@@ -52,7 +52,7 @@ def _write(path, app, contact, rows):
 
 def worth_keeping(chat):
     """Only chats where we know who said what and who the chat is with."""
-    return chat.method not in ("uia-generic", "none") and chat.contact not in ("", "them") and bool(chat.messages)
+    return chat.method not in ("uia-generic", "none") and chat.contact not in ("", "them", "the channel") and bool(chat.messages)
 
 
 def record(chat):

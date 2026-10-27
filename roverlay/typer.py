@@ -3,6 +3,8 @@
 Safety rules, because these keystrokes land in someone's chat:
 - Never press a bare Enter: in chat apps it sends. A line break is typed as Shift+Enter.
 - Stop the moment the target window isn't in front any more (the user switched away).
+- Check the caret is still in the message box right before the first keystroke (the model can take a few
+  seconds, and the user may have clicked elsewhere in the same window meanwhile).
 """
 import ctypes
 import time
@@ -71,9 +73,10 @@ def backspace():
 class StreamTyper:
     """Feed it model tokens; it types them into the chat box as they arrive."""
 
-    def __init__(self, target_hwnd, replace=False):
+    def __init__(self, target_hwnd, replace=False, still_in_box=None):
         self.target = target_hwnd
         self.replace = replace
+        self.still_in_box = still_in_box
         self.started = False
         self.stopped = False
         self.cancelled = False
@@ -97,6 +100,9 @@ class StreamTyper:
         if not self.started:
             piece = piece.lstrip()
             if not piece:
+                return
+            if self.still_in_box and not self.still_in_box():
+                self.stopped = True
                 return
             self.started = True
             if self.replace:  # redo: the old draft is selected and the first character replaces it

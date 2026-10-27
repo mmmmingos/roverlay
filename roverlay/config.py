@@ -1,7 +1,7 @@
 """Where Roverlay keeps things, and the user's settings.
 
 - Settings: %APPDATA%\\Roverlay\\settings.json
-- Models and llama.cpp: %LOCALAPPDATA%\\Roverlay\\models
+- Models and llama.cpp: %LOCALAPPDATA%\\Roverlay\\models, or the "models_dir" in settings.json
 - Voice memory: Documents\\Roverlay\\voice (plain text, meant to be opened and read)
 """
 import json
@@ -12,8 +12,7 @@ from pathlib import Path
 VERSION = "0.1.0"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "Roverlay"
 DATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Roverlay"
-MODELS_DIR = DATA_DIR / "models"
-LLAMA_DIR = MODELS_DIR / "llama.cpp"
+DEFAULT_MODELS_DIR = DATA_DIR / "models"
 MEMORY_DIR = Path.home() / "Documents" / "Roverlay" / "voice"
 SETTINGS_FILE = APP_DIR / "settings.json"
 
@@ -29,8 +28,6 @@ MODELS = {
     "4b": {"label": "Qwen3.5 4B", "file": "Qwen3.5-4B-Q4_K_M.gguf", "size_gb": 2.7,
            "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf"},
 }
-# Models downloaded before Roverlay existed (the prototype kept them here); used in place if present.
-LEGACY_MODELS_DIR = Path.home() / "models"
 
 
 @dataclass
@@ -41,6 +38,7 @@ class Settings:
     launch_at_startup: bool = False
     paused: bool = False
     my_names: list = field(default_factory=list)
+    models_dir: str = ""  # optional: models already downloaded somewhere else (no Settings control; edit the file)
 
     @classmethod
     def load(cls):
@@ -61,18 +59,26 @@ class Settings:
         tmp.replace(SETTINGS_FILE)
 
 
+def models_dir():
+    custom = Settings.load().models_dir
+    return Path(custom) if custom else DEFAULT_MODELS_DIR
+
+
+def llama_dir():
+    return models_dir() / "llama.cpp"
+
+
 def model_path(name):
-    """Where a model's file is, preferring an existing download over a new one."""
-    file = MODELS[name]["file"]
-    for folder in (MODELS_DIR, LEGACY_MODELS_DIR):
-        if (folder / file).exists():
-            return folder / file
-    return MODELS_DIR / file
+    return models_dir() / MODELS[name]["file"]
+
+
+def llama_ready():
+    """llama.cpp is usable only once its download finished unpacking: a half-extracted folder has the exe without
+    its DLLs and would otherwise never be fetched again. A folder of llama.cpp the user put there themselves (no
+    marker, but the exe and a CUDA runtime present) also counts."""
+    d = llama_dir()
+    return (d / "llama-server.exe").exists() and ((d / ".complete").exists() or any(d.glob("cudart64_*.dll")))
 
 
 def llama_server():
-    for folder in (LLAMA_DIR, LEGACY_MODELS_DIR / "llama.cpp"):
-        exe = folder / "llama-server.exe"
-        if exe.exists():
-            return exe
-    return LLAMA_DIR / "llama-server.exe"
+    return llama_dir() / "llama-server.exe"

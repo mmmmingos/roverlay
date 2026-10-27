@@ -80,7 +80,7 @@ Open a chat, click into it, and press `Ctrl+Shift+Space`.
 | `Ctrl+Shift+Space` | While a draft is typing | Stops the draft. |
 | `Enter` | In the bar, with an instruction | Writes a reply, or rewrites the text already in the box. |
 | `Enter` | In the bar, with no instruction | Tidies the text already in the box. |
-| `Ctrl+Z` | In the bar | Puts back the text the box had before the rewrite. |
+| `Ctrl+Z` | In the bar, with the field empty | Puts back the text the box had before a rewrite, for up to 10 minutes after it. |
 | `Esc` | In the bar | Closes the bar. |
 | `Enter` | In the chat | Sends the message. Roverlay never presses this for you. |
 
@@ -105,12 +105,12 @@ Each time you use it, Roverlay saves the messages that were on screen to a plain
 Documents\Roverlay\voice\<app>\<contact>.md
 ```
 
-Each line says who wrote it: **Me** for you, the other person's name, or **unsure** when the app gave no reliable way to tell. Roverlay only adds lines it hasn't seen before, keeps the last 200 per contact, and drops older ones. When you draft a reply, it reads your past messages to that person so the draft sounds like you. For example, `Documents\Roverlay\voice\WhatsApp\Dave the tiler.md` could look like this:
+Each line says who wrote it: **Me** for you, or the other person's name. Roverlay avoids saving the same messages twice, keeps the last 200 per contact, and drops older ones. When you draft a reply, it reads your past messages to that person so the draft sounds like you. For example, `Documents\Roverlay\voice\WhatsApp\Dave the tiler.md` could look like this:
 
 ```markdown
 # Dave the tiler · WhatsApp
 
-Messages Roverlay has seen in this chat, oldest first. **Me** is you; **unsure** means the app gave no reliable way to tell who wrote it. Edit or delete anything; Roverlay only adds to the end.
+Messages Roverlay has seen in this chat, oldest first. **Me** is you. Edit or delete anything; Roverlay only adds to the end.
 
 - 2026-10-28 · **Dave the tiler:** Can do the bathroom for 3.8k all up. Earliest start is next month.
 - 2026-10-28 · **Me:** Thanks Dave. Bit over what I had in mind, can you do 3.5?

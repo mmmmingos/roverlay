@@ -80,10 +80,10 @@ window.ui = {
     hadFocus = false;
     busy = false;
     document.body.classList.remove("busy");
-    body.hidden = false;
+    body.hidden = !text;  // an error with nothing to copy is just the message
     draft.value = text;
     status.textContent = msg;
-    keys.innerHTML = KEYS.fallback;
+    keys.innerHTML = text ? KEYS.fallback : KEYS.fallback.split("</span>").slice(1).join("</span>");
     appear();
     fit();
     draft.focus();

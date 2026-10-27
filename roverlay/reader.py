@@ -1,6 +1,6 @@
 """Read the conversation in a window with UI Automation: who said what, and who it's with.
 
-One small parser per app, learned from the overnight probes (docs/research/prototype-results.md).
+One small parser per app, learned by probing each app's accessibility tree.
 Anything else falls back to a plain dump of the window's text, with no senders.
 """
 import re
@@ -187,9 +187,12 @@ def labelled(els, me_names):
         if current is None or e.type != "TextControl" or is_noise(e.name) or len(e.name) < 2:
             continue
         mine = current in ("You", "Me") or current in me_names
+        m = Message("me" if mine else "them", "Me" if mine else current, " ".join(e.name.split()))
+        if msgs and msgs[-1] == m:  # browsers expose a paragraph and the text inside it: the same line twice
+            continue
         if not mine:
             others[current] = others.get(current, 0) + 1
-        msgs.append(Message("me" if mine else "them", "Me" if mine else current, " ".join(e.name.split())))
+        msgs.append(m)
     if not msgs:
         return None
     contact = max(others, key=others.get) if others else "them"

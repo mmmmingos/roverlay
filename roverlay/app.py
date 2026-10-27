@@ -135,6 +135,8 @@ class App:
         self.visible = False
         self.quitting = False
         self.chat = None
+        self.context_ready = threading.Event()  # set once this showing's chat and box have been read
+        self.showing = 0  # counts showings, so a slow read from an earlier one is ignored
         self.target = 0
         self.last = None  # the draft we last typed: {target, chat, first, text, t}
         self.rewrite = None  # when the box already has text: {text, source, written_from}
@@ -188,6 +190,10 @@ class App:
 
     def toggle_pause(self):
         self.apply_settings({"paused": not self.settings.paused})
+        try:  # paused from the tray: the settings page shows it too
+            self.settings_window.evaluate_js("window.settingsUI && window.settingsUI.refresh()")
+        except Exception as e:
+            print("settings refresh failed:", type(e).__name__)
 
     def quit(self):
         self.quitting = True
@@ -293,13 +299,15 @@ class App:
                 print("hotkey ignored: no chat window to attach to")
                 return
         t0 = time.perf_counter()
+        self.showing += 1
+        self.context_ready.clear()
         self.target, self.chat, self.rewrite = target, None, None
         self.box_hint, caret_rect = focused_box(target)
         self.place(target, self.anchor_for(target, caret_rect))
         self.js("open")
         self.window.show()
         self.visible = True
-        threading.Thread(target=self.read_chat, args=(target,), daemon=True).start()
+        threading.Thread(target=self.read_chat, args=(target, self.showing), daemon=True).start()
         for _ in range(40):  # take focus only once the window is really up, or keystrokes go to the app below
             if win32gui.IsWindowVisible(self.hwnd):
                 break
@@ -338,59 +346,63 @@ class App:
 
     # --- reading, drafting, typing ---
 
-    def read_chat(self, target):
+    def read_chat(self, target, showing):
+        """Read the chat and the message box while the user types. self.rewrite is settled before self.chat is
+        published (and context_ready set), so a quick Enter can't see a chat without its box contents."""
         try:
             chat = read(target, self.settings.my_names)
         except Exception as e:
             print("read failed:", type(e).__name__)
-            self.js("context", {"app": "this window", "contact": "them", "count": 0, "method": "none", "readMs": 0,
-                                "modelReady": self.drafter.ready.is_set()})
+            chat = Chat("this window", "them")
+        rewrite = self.box_contents(target)
+        if showing != self.showing:
             return
-        if target != self.target:
-            return
-        if self.settings.memory_enabled:
+        if self.settings.memory_enabled and chat.messages:
             try:
                 chat.examples = memory.my_past_messages(chat)
                 added = memory.record(chat)
                 if added:
-                    print(f"memory: {added} new lines saved ({chat.app})")
+                    print(f"memory: {added} new lines saved")
             except OSError as e:
-                print("memory write failed:", e)
-        self.chat = chat
-        self.rewrite = self.box_contents(target)
+                print("memory write failed:", type(e).__name__)
+        self.rewrite, self.chat = rewrite, chat
+        self.context_ready.set()
         can_undo = bool(self.undo and self.undo["target"] == target and time.time() - self.undo["t"] < 600)
-        mode = "rewrite" if self.rewrite else "new"
-        print(f"read {chat.app} via {chat.method}: {len(chat.messages)} messages in {chat.read_ms} ms; mode {mode}"
+        mode = "rewrite" if rewrite else "new"
+        print(f"read via {chat.method}: {len(chat.messages)} messages in {chat.read_ms} ms; mode {mode}"
               f"; {len(chat.examples)} tone examples from memory")
-        preview = " ".join(self.rewrite["text"].split())[:70] if self.rewrite else ""
+        preview = " ".join(rewrite["text"].split())[:70] if rewrite else ""
         self.js("context", {"app": chat.app, "contact": chat.contact, "count": len(chat.messages),
                             "method": chat.method, "readMs": chat.read_ms, "mode": mode, "preview": preview,
                             "canUndo": can_undo, "modelReady": self.drafter.ready.is_set()})
-        self.drafter.prefill(chat)
+        if chat.messages:
+            self.drafter.prefill(chat)
 
     def box_contents(self, target):
-        """What a rewrite would start from, or None for a new message."""
-        text, rect = read_box_text(target, self.box_hint)
+        """What a rewrite would start from, or None for a new message (also when the box can't be read)."""
+        try:
+            text, rect = read_box_text(target, self.box_hint)
+        except Exception as e:
+            print("reading the message box failed:", type(e).__name__)
+            return None
         if rect:
             self.box_rects[target] = (rect, win32gui.GetWindowRect(target))
+        if not text:
+            return None
         last = self.last if self.last and self.last["target"] == target else None
-        if text:
-            ours = bool(last and " ".join(last["text"].split())[:25] in " ".join(text.split()))
-            return {"text": text, "source": "our last draft" if ours else "read from the box",
-                    "written_from": last["first"] if ours else None}
-        if text is None and last and time.time() - last["t"] < 120:
-            return {"text": last["text"], "source": "our last draft, box unreadable", "written_from": last["first"]}
-        return None
+        ours = bool(last and " ".join(last["text"].split())[:25] in " ".join(text.split()))
+        return {"text": text, "source": "our last draft" if ours else "read from the box",
+                "written_from": last["first"] if ours else None}
 
     def do_draft(self, instruction):
-        waited = 0
-        while self.chat is None and waited < 5:  # the read usually finishes before you've typed
-            time.sleep(0.05)
-            waited += 0.05
-        rewrite, target = self.rewrite, self.target
+        target = self.target
+        if self.context_ready.wait(5):
+            chat, rewrite = self.chat, self.rewrite
+        else:  # the chat read is unusually slow: go without it, but never type over text already in the box
+            print("chat read still running after 5 s; drafting without it")
+            chat, rewrite = Chat("this window", "them"), self.box_contents(target)
         if instruction.strip().lower() == "undo":
             return self.do_undo()
-        chat = self.chat or Chat("this app", "them")
         if rewrite:
             instruction = instruction.strip() or TIDY
             kwargs = {"existing": rewrite["text"], "written_from": rewrite["written_from"]}
@@ -399,29 +411,51 @@ class App:
         if not self.drafter.available():
             self.js("error", "The model isn't downloaded yet. Open Settings from the tray icon to download it.")
             return
+        self.drafter.ensure_running()  # loads it again if it crashed since the last draft
         if not self.drafter.ready.is_set():
             self.js("waiting", "Loading the model, about 10 seconds the first time…")
-            self.drafter.ready.wait()
+            if not self.drafter.wait_ready():
+                self.js("error", self.drafter.failed or "The model didn't load. Restart Roverlay from the tray icon.")
+                return
         if not self.hand_back_to_box(target):
-            text, *_ = self.drafter.draft(chat, instruction, lambda piece: None, **kwargs)
+            try:
+                text, *_ = self.drafter.draft(chat, instruction, lambda piece: None, **kwargs)
+            except Exception as e:
+                print("drafting failed:", type(e).__name__)
+                self.show_fallback("", "The model stopped before finishing. Try again in a moment.")
+                self.drafter.ensure_running()
+                return
             print("couldn't confirm the message box has focus; showed the draft in the bar instead of typing")
             self.show_fallback(text, "Couldn't find the message box, so nothing was typed. Copy the draft below.")
             return
-        typer = StreamTyper(target, replace=bool(rewrite))
-        self.typing = {"typer": typer, "target": target, "original": rewrite["text"] if rewrite else ""}
+        original = rewrite["text"] if rewrite else ""
+        typer = StreamTyper(target, replace=bool(rewrite), still_in_box=lambda: compose_has_focus(target))
+        self.typing = {"typer": typer, "target": target, "original": original}
         try:
             text, first_ms, total_ms, retried = self.drafter.draft(chat, instruction, typer.feed, **kwargs)
         except Cancelled:
-            self.restore_box(target, self.typing["original"], typer)
+            self.restore_box(target, original, typer)
             return
         except Exception as e:
+            # The model died or the connection dropped mid-draft: put the box back the way the user left it
+            # and show what had arrived, rather than leave half a message in the chat.
             print("drafting failed:", type(e).__name__)
+            partial = typer.text
+            self.restore_box(target, original, typer)
+            self.show_fallback(partial, "The model stopped before finishing, so the box was put back. "
+                                        "Try again in a moment.")
+            self.drafter.ensure_running()
             return
         finally:
             self.typing = None
         if not typer.started:
-            print("draft looked like the instruction twice; nothing typed")
-            self.show_fallback(text, "That draft restated your instruction, so nothing was typed. Try rewording it.")
+            if typer.stopped:
+                print("the caret left the message box before typing started; nothing typed")
+                self.show_fallback(text, "The message box lost focus, so nothing was typed. Copy the draft below.")
+            else:
+                print("draft looked like the instruction twice; nothing typed")
+                self.show_fallback(text, "That draft restated your instruction, so nothing was typed. "
+                                         "Try rewording it.")
             return
         if typer.stopped:
             pyperclip.copy(text)
@@ -491,7 +525,7 @@ class App:
                 if form is not None:
                     form.Invoke(Action(lambda f=form: setattr(f, "Icon", icon)))
         except Exception as e:
-            print("couldn't set the window icon:", type(e).__name__, e)
+            print("couldn't set the window icon:", type(e).__name__)
 
     def started(self):
         threading.Thread(target=self.js_worker, daemon=True).start()

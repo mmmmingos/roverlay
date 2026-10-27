@@ -7,6 +7,7 @@
 """
 import json
 import re
+import socket
 import subprocess
 import threading
 import time
@@ -16,12 +17,14 @@ import win32api
 import win32con
 import win32job
 
-from .config import llama_server, model_path
+from .config import llama_ready, llama_server, model_path
 
-PORT = 8092
-URL = f"http://127.0.0.1:{PORT}"
-# Restating the instruction looks like "ask if he's keen..." or "Tell him the quote...". A false hit only costs one redo.
-ECHO = re.compile(r"^(ask|tell)\s|\b(ask (him|her) |ask if (he|she)\b|tell (him|her)\b|let (him|her) know)", re.I)
+# Restating the instruction instead of writing the message looks like "ask if he's keen..." or "Tell him the quote
+# is...". Kept narrow: ordinary replies such as "I'll let him know", "Tell me more" or "Ask away" must not match,
+# because a match means nothing gets typed.
+ECHO = re.compile(r"^(ask|tell) (him|her|them|if|whether)\b|\bask (him|her) (if|whether|to)\b|\bask if (he|she)\b"
+                  r"|\btell (him|her) (that|to|i)\b", re.I)
+START_TIMEOUT = 120  # seconds for llama-server to load the model before we call it failed
 
 SYSTEM = (
     "You write the next chat message for the user, called Me, in the conversation below, following Me's instruction. "
@@ -35,35 +38,51 @@ SYSTEM = (
 TIDY = "tidy it up: fix typos, grammar and awkward wording, but keep my meaning, my tone and about the same length"
 
 
-def healthy():
-    try:
-        with urllib.request.urlopen(f"{URL}/health", timeout=1) as r:
-            return r.status == 200
-    except Exception:
-        return False
+def free_port():
+    """A port nothing is listening on. A fixed port let another program (or an old copy) answer as our model."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
 class Drafter:
     def __init__(self, model="9b"):
         self.model = model
         self.proc = None
+        self.port = None
         self.ready = threading.Event()
+        self.failed = None  # why the model couldn't start, for the bar to show
+
+    @property
+    def url(self):
+        return f"http://127.0.0.1:{self.port}"
+
+    def healthy(self):
+        if not self.port:
+            return False
+        try:
+            with urllib.request.urlopen(f"{self.url}/health", timeout=1) as r:
+                return r.status == 200
+        except Exception:
+            return False
 
     def available(self):
-        return model_path(self.model).exists() and llama_server().exists()
+        return model_path(self.model).exists() and llama_ready()
 
     def start(self):
-        """Load the chosen model in the background. Does nothing until the model and llama.cpp are downloaded."""
+        """Load the chosen model in the background, in our own llama-server on a free port. Does nothing until the
+        model and llama.cpp are downloaded."""
+        self.failed = None
         if not self.available():
             print(f"model {self.model} not downloaded yet; open Settings to download it")
             return False
-        if not healthy():
-            self.proc = subprocess.Popen(
-                [str(llama_server()), "-m", str(model_path(self.model)), "-ngl", "99", "-c", "8192", "-np", "1",
-                 "--reasoning", "off", "--port", str(PORT), "--no-webui"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
-            self._tie_to_this_process(self.proc)
-        threading.Thread(target=self._wait, daemon=True).start()
+        self.port = free_port()
+        self.proc = subprocess.Popen(
+            [str(llama_server()), "-m", str(model_path(self.model)), "-ngl", "99", "-c", "8192", "-np", "1",
+             "--reasoning", "off", "--host", "127.0.0.1", "--port", str(self.port), "--no-webui"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+        self._tie_to_this_process(self.proc)
+        threading.Thread(target=self._wait, args=(self.proc,), daemon=True).start()
         return True
 
     def switch(self, model):
@@ -71,10 +90,14 @@ class Drafter:
         self.stop()
         self.ready.clear()
         self.model = model
-        deadline = time.time() + 10
-        while healthy() and time.time() < deadline:  # wait for the old server to let go of the port
-            time.sleep(0.2)
         return self.start()
+
+    def ensure_running(self):
+        """After a crash (say, out of graphics memory on a long chat), load the model again."""
+        if self.proc is None or self.proc.poll() is not None:
+            self.ready.clear()
+            return self.start()
+        return True
 
     def _tie_to_this_process(self, proc):
         """Put the server in a job that Windows closes when this process exits, however it exits,
@@ -86,10 +109,31 @@ class Drafter:
         handle = win32api.OpenProcess(win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE, False, proc.pid)
         win32job.AssignProcessToJobObject(self.job, handle)
 
-    def _wait(self):
-        while not healthy():
+    def _wait(self, proc):
+        """Ready once the server answers; failed if it exits first or takes too long. Without the exit check, a
+        server that couldn't start (old NVIDIA driver, a broken download) left the bar on "Loading" forever."""
+        t0 = time.time()
+        while not self.healthy():
+            if proc.poll() is not None:
+                self.failed = ("The model couldn't start. Check your NVIDIA driver is up to date, or download "
+                               "the model again from Settings.")
+                print(f"llama-server exited during start (code {proc.returncode})")
+                return
+            if time.time() - t0 > START_TIMEOUT:
+                self.failed = "The model took too long to load. Restart Roverlay from the tray icon."
+                print("llama-server didn't become ready in time")
+                return
             time.sleep(0.25)
         self.ready.set()
+
+    def wait_ready(self, timeout=START_TIMEOUT):
+        """True when ready; False when it failed or timed out (self.failed says why)."""
+        t0 = time.time()
+        while not self.ready.is_set():
+            if self.failed or time.time() - t0 > timeout:
+                return False
+            time.sleep(0.1)
+        return True
 
     def stop(self):
         if self.proc:
@@ -133,7 +177,8 @@ class Drafter:
     def prefill(self, chat):
         """Process the chat now, while the user types; the draft request reuses it from the cache."""
         def go():
-            self.ready.wait()
+            if not self.wait_ready():
+                return
             body = {"messages": self._messages(chat), "max_tokens": 1, "cache_prompt": True}
             try:
                 self._post(body, stream=False)
@@ -142,7 +187,7 @@ class Drafter:
         threading.Thread(target=go, daemon=True).start()
 
     def _post(self, body, stream):
-        req = urllib.request.Request(f"{URL}/v1/chat/completions", data=json.dumps({**body, "stream": stream}).encode(),
+        req = urllib.request.Request(f"{self.url}/v1/chat/completions", data=json.dumps({**body, "stream": stream}).encode(),
                                      headers={"Content-Type": "application/json"})
         return urllib.request.urlopen(req, timeout=120)
 
@@ -155,7 +200,8 @@ class Drafter:
         HOLD = 40
         # In a rewrite, the user's own text may legitimately say "tell him ..."; don't flag what they wrote.
         check = (lambda t: bool(ECHO.search(t))) if not (existing and ECHO.search(existing)) else (lambda t: False)
-        self.ready.wait()
+        if not self.wait_ready():
+            raise RuntimeError(self.failed or "the model isn't ready")
         t0 = time.perf_counter()
         first_ms = None
         for attempt in range(2):
