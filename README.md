@@ -8,7 +8,9 @@ Roverlay is a free, open-source Windows app that drafts chat replies with a loca
 
 The name is short for "reply overlay".
 
-![Roverlay demo](docs/demo.gif)
+![Roverlay demo: press Ctrl+Shift+Space in a chat, type what you want to say, and the reply writes itself into the message box](docs/demo.gif)
+
+<sub>The demo is a staged chat page with made-up people, recorded with the real app. [MP4 version](docs/demo.mp4).</sub>
 
 > Roverlay is an early prototype that I built for my own use. It runs on Windows only. I share it as-is and maintain it occasionally.
 
@@ -38,32 +40,34 @@ A reply assistant has to read your private chats. Roverlay keeps them on your PC
 ## Requirements
 
 - Windows 10 or Windows 11.
-- An NVIDIA GPU with about 6 GB of graphics memory (VRAM) or more is recommended for the default 9B model. A smaller 4B model is available for GPUs with about 4 GB.
+- An NVIDIA GPU. About 6 GB of graphics memory (VRAM) or more is recommended for the default 9B model. A smaller 4B model is available for GPUs with about 4 GB. Roverlay uses the CUDA build of llama.cpp.
 - Google Chrome, for WhatsApp Web, Messenger, and Instagram.
-- Disk space for the first-run download of llama.cpp and the model. With the 9B model, the download is about 5.7 GB.
+- Disk space for the models: about 5.7 GB for the 9B model or 2.7 GB for the 4B, plus about 0.7 GB for llama.cpp.
 
 ## Install
 
 ### Download a release
 
-1. Download the latest version from the [Releases page](https://github.com/mmmmingos/roverlay/releases).
-2. Run it.
-3. On first run, Roverlay downloads llama.cpp and the model. The 9B model download is about 5.7 GB.
+1. Download `Roverlay-0.1.0-windows.zip` from the [Releases page](https://github.com/mmmmingos/roverlay/releases) and unzip it anywhere.
+2. Run `Roverlay.exe`. The app isn't code-signed, so Windows SmartScreen may warn you. Choose **More info**, then **Run anyway**.
+3. Settings opens on first run. Click **Download** next to the model. Roverlay downloads llama.cpp and the model, then it's ready.
+
+Roverlay then lives in the system tray. Running `Roverlay.exe` again opens Settings.
 
 ### Run from source
 
-You need [uv](https://docs.astral.sh/uv/) and Python.
+You need [uv](https://docs.astral.sh/uv/).
 
 ```powershell
 git clone https://github.com/mmmmingos/roverlay.git
 cd roverlay
-uv venv
+uv venv --python 3.12
 .venv\Scripts\activate
 uv pip install -r requirements.txt
 python -m roverlay
 ```
 
-The first run downloads llama.cpp and the model, as in the release version.
+To build the app folder and zip yourself: `uv pip install pyinstaller`, then `python scripts\build.py`.
 
 ## Use it
 
@@ -87,7 +91,9 @@ Roverlay reads who wrote each message in these apps:
 - The Slack desktop app.
 - The Discord desktop app.
 
-In other windows, Roverlay still reads the visible text and drafts a reply. It can't tell who said what there, so the draft has less to go on.
+Other chat sites that label each message with its sender, as accessible sites do, get names too. In any other window, Roverlay still reads the visible text and drafts a reply. It can't tell who said what there, so the draft has less to go on.
+
+Your own messages are labelled **Me**. Roverlay works that out from the layout (WhatsApp, Messenger, Instagram) or from the name the app shows for you (Discord). In Slack and group chats, add the names you use under **Settings > Advanced** if your messages get labelled as someone else's.
 
 ## Voice memory
 
@@ -99,14 +105,20 @@ Each time you use it, Roverlay saves the messages that were on screen to a plain
 Documents\Roverlay\voice\<app>\<contact>.md
 ```
 
-Each line says whether you or the other person wrote it. Roverlay keeps the last 200 messages per contact and drops older ones. When you draft a reply, it reads your past messages to that person so the draft sounds like you. For example, `Documents\Roverlay\voice\whatsapp\Dave the tiler.md` could look like this:
+Each line says who wrote it: **Me** for you, the other person's name, or **unsure** when the app gave no reliable way to tell. Roverlay only adds lines it hasn't seen before, keeps the last 200 per contact, and drops older ones. When you draft a reply, it reads your past messages to that person so the draft sounds like you. For example, `Documents\Roverlay\voice\WhatsApp\Dave the tiler.md` could look like this:
 
 ```markdown
-Dave the tiler: Can do the bathroom for 3.8k all up. Earliest start is next month.
-You: Thanks Dave. Bit over what I had in mind, can you do 3.5?
-Dave the tiler: Could do 3.6 if you supply the tiles.
-You: Sounds fair, I'll grab the tiles this weekend
+# Dave the tiler · WhatsApp
+
+Messages Roverlay has seen in this chat, oldest first. **Me** is you; **unsure** means the app gave no reliable way to tell who wrote it. Edit or delete anything; Roverlay only adds to the end.
+
+- 2026-10-28 · **Dave the tiler:** Can do the bathroom for 3.8k all up. Earliest start is next month.
+- 2026-10-28 · **Me:** Thanks Dave. Bit over what I had in mind, can you do 3.5?
+- 2026-10-28 · **Dave the tiler:** Could do 3.6 if you supply the tiles.
+- 2026-10-28 · **Me:** sounds fair, I'll grab the tiles this weekend
 ```
+
+Windows where Roverlay can't tell who wrote what aren't saved.
 
 You control these files:
 
@@ -117,12 +129,23 @@ You control these files:
 
 ## Settings
 
-Right-click the Roverlay icon in the system tray for **Open settings**, **Pause**, and **Quit**. The settings page has these options:
+Click the Roverlay icon in the system tray to open Settings, or right-click it for **Open settings**, **Pause**, and **Quit**. The settings page has these options:
 
-- **Shortcut.** Change `Ctrl+Shift+Space` to another key combination.
-- **Model.** Choose the 9B model or the smaller 4B model.
-- **Memory.** Turn voice memory on or off, or use **Forget everything**.
-- **Start with Windows.** Launch Roverlay when you sign in.
+- **Shortcut.** Change `Ctrl+Shift+Space` to another key combination. It must include `Ctrl`, `Alt` or `Win`.
+- **Model.** Choose the 9B model or the smaller 4B model, and download it.
+- **Voice memory.** Turn it on or off, open the folder, see which contacts are saved, or use **Forget everything**.
+- **Start with Windows.** Launch Roverlay quietly in the tray when you sign in.
+- **Paused.** The shortcut does nothing until you turn it off.
+- **Advanced.** The names you use in Slack, Discord and group chats, if Roverlay mixes up who is who.
+
+Where things live:
+
+| What | Where |
+| --- | --- |
+| Voice memory | `Documents\Roverlay\voice` |
+| Settings | `%APPDATA%\Roverlay\settings.json` |
+| Models and llama.cpp | `%LOCALAPPDATA%\Roverlay\models` |
+| Log (timings and counts, never message text) | `%LOCALAPPDATA%\Roverlay\roverlay.log` |
 
 ## How it works
 
@@ -167,7 +190,7 @@ Roverlay drafts WhatsApp replies with an AI model that runs on your own PC. It r
 
 ### Does Roverlay send my messages anywhere?
 
-No. Roverlay reads your chats on your PC and sends them to a llama.cpp server on the same PC, at `127.0.0.1`. Roverlay goes online only on first run, to download llama.cpp and the model. Voice memory is plain Markdown in your Documents folder, and you can delete it at any time.
+No. Roverlay reads your chats on your PC and sends them to a llama.cpp server on the same PC, at `127.0.0.1`. Roverlay goes online only when you click **Download** in Settings, to fetch llama.cpp from GitHub and the model from Hugging Face. Roverlay's own code has no update checks, analytics or telemetry, and its pages load nothing from the internet. Voice memory is plain Markdown in your Documents folder, and you can delete it at any time.
 
 ### Which chat apps does it work with?
 
@@ -195,7 +218,8 @@ An NVIDIA GPU with about 6 GB of VRAM or more runs the default Qwen3.5 9B model.
 - In Slack, Roverlay reads only part of the visible conversation.
 - If you type at the same instant you press the hotkey, a letter can land in the chat.
 - Roverlay is untested in Windows light mode.
-- Roverlay runs on Windows only.
+- Roverlay runs on Windows only, and needs an NVIDIA GPU for the CUDA build of llama.cpp.
+- The app isn't code-signed, so Windows SmartScreen warns on first launch.
 
 ## Credits
 

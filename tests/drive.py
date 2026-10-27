@@ -4,6 +4,7 @@ Usage: python drive.py "<chat window title substring>" "<instruction>" [paste]
 Without 'paste' it closes the bar with Esc, so nothing goes into the chat.
 """
 import ctypes
+import os
 import sys
 import time
 from pathlib import Path
@@ -16,7 +17,7 @@ import win32gui
 from PIL import Image
 
 OUT = Path(__file__).parent / "out"
-LOG = Path(__file__).parent / "roverlay.log"
+LOG = Path(os.environ.get("ROVERLAY_LOG", Path(__file__).parent / "roverlay.log"))
 user32 = ctypes.windll.user32
 
 

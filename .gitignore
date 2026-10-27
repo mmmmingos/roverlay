@@ -8,3 +8,4 @@ tests/out/
 tests/*.log
 *.log
 .audit/
+*.spec

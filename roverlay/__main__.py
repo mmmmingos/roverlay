@@ -17,6 +17,14 @@ def main():
         event = win32event.CreateEvent(None, False, False, "Roverlay.ShowSettings")
         win32event.SetEvent(event)
         return 0
+    # The packaged app has no console: keep its log (timings and counts, never message text) in a file.
+    if getattr(sys, "frozen", False) or sys.stdout is None:
+        from .config import DATA_DIR
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        log = DATA_DIR / "roverlay.log"
+        if log.exists() and log.stat().st_size > 1_000_000:
+            log.replace(log.with_suffix(".old.log"))
+        sys.stdout = sys.stderr = open(log, "a", encoding="utf-8", buffering=1)
     # Its own taskbar identity, so Windows shows Roverlay's icon rather than Python's.
     import ctypes
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("MingXu.Roverlay")

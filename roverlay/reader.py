@@ -171,6 +171,31 @@ def discord(els, rect, me_names):
     return contact, msgs
 
 
+def labelled(els, me_names):
+    """Any chat site that labels each run of messages with its sender, the way WhatsApp Web does: a group named
+    "Dave:" before Dave's messages and "You:" before yours. Returns (contact, messages), or None when the page
+    has no such labels."""
+    heads = [e for e in els if e.type == "GroupControl" and e.name.endswith(":") and 1 < len(e.name) < 60]
+    if not heads:
+        return None
+    current, msgs, others = None, [], {}
+    head_ids = {id(h) for h in heads}
+    for e in els:
+        if id(e) in head_ids:
+            current = e.name[:-1].strip()
+            continue
+        if current is None or e.type != "TextControl" or is_noise(e.name) or len(e.name) < 2:
+            continue
+        mine = current in ("You", "Me") or current in me_names
+        if not mine:
+            others[current] = others.get(current, 0) + 1
+        msgs.append(Message("me" if mine else "them", "Me" if mine else current, " ".join(e.name.split())))
+    if not msgs:
+        return None
+    contact = max(others, key=others.get) if others else "them"
+    return contact, msgs
+
+
 def generic(els, rect, me_names):
     seen, msgs = set(), []
     for e in els:
@@ -213,6 +238,10 @@ def read(hwnd, me_names):
     parser = PARSERS.get(app, generic)
     contact, msgs = parser(els, rect, me_names)
     method = f"uia-{app.lower()}" if app in PARSERS else "uia-generic"
+    if app not in PARSERS:  # an app we don't know: use sender labels if the page has them
+        found = labelled(els, me_names)
+        if found:
+            (contact, msgs), method = found, "uia-labelled"
     if app in PARSERS and not msgs:  # tree not built yet, or the layout changed: fall back to raw text
         contact, msgs = generic(els, rect, me_names)
         method = "uia-generic"

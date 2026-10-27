@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Dave the tiler</title>
-<!-- A staged chat for tests and the demo recording: made-up people, no real app's branding. -->
+<title>Chats</title>
+<!-- A staged chat for tests and the demo recording: made-up people, no real app's branding. Each message
+     is labelled with its sender (role="group" aria-label="Dave the tiler:" / "You:"), as accessible chat sites do. -->
 <style>
   :root { --bg: #0e1116; --panel: #151a21; --them: #1f2630; --me: #2c4a3e; --text: #e8edf2; --muted: #8b96a3; }
   * { box-sizing: border-box; }
@@ -39,9 +40,9 @@
   <main>
     <header><div class="av" style="background:#f2a22a">D</div><div><b>Dave the tiler</b><br><span>online</span></div></header>
     <div id="msgs">
-      <div class="m them">Thanks for having me today. Quote attached. All up $4,000 inc GST for strip out, waterproofing, screed and tiling floor + shower walls<span class="t">4:12 pm</span></div>
-      <div class="m me">thanks dave, will have a look tonight<span class="t">4:20 pm</span></div>
-      <div class="m them">All good. I've got a gap in 2 weeks if you want to lock it in, otherwise I'm booked till Feb<span class="t">6:41 pm</span></div>
+      <div class="m them" role="group" aria-label="Dave the tiler:"><span>Hey mate, Dave here. Thanks for having me today. Quote attached, all up $4,000 inc GST for strip out, waterproofing, screed and tiling floor + shower walls</span><span class="t">4:12 pm</span></div>
+      <div class="m me" role="group" aria-label="You:"><span>thanks dave, will have a look tonight</span><span class="t">4:20 pm</span></div>
+      <div class="m them" role="group" aria-label="Dave the tiler:"><span>All good. I've got a gap in 2 weeks if you want to lock it in, otherwise I'm booked till Feb</span><span class="t">6:41 pm</span></div>
     </div>
     <footer>
       <div id="sent" aria-label="send detector"></div>

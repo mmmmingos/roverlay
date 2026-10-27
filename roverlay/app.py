@@ -353,7 +353,7 @@ class App:
                 chat.examples = memory.my_past_messages(chat)
                 added = memory.record(chat)
                 if added:
-                    print(f"memory: {added} new lines for {chat.app} / {chat.contact}")
+                    print(f"memory: {added} new lines saved ({chat.app})")
             except OSError as e:
                 print("memory write failed:", e)
         self.chat = chat
