@@ -173,17 +173,27 @@ def discord(els, rect, me_names):
 
 def labelled(els, me_names):
     """Any chat site that labels each run of messages with its sender, the way WhatsApp Web does: a group named
-    "Dave:" before Dave's messages and "You:" before yours. Returns (contact, messages), or None when the page
-    has no such labels."""
+    "Dave:" around Dave's messages and "You:" around yours. Returns (contact, messages), or None when the page
+    has no such labels.
+
+    A label owns only the text inside its group, so the page's other text (the message box, browser buttons)
+    isn't read as the last sender's messages. Sites that put the label beside the messages instead of around
+    them get the looser reading: everything up to the next label."""
     heads = [e for e in els if e.type == "GroupControl" and e.name.endswith(":") and 1 < len(e.name) < 60]
     if not heads:
         return None
-    current, msgs, others = None, [], {}
+    return _labelled(els, heads, me_names, inside=True) or _labelled(els, heads, me_names, inside=False)
+
+
+def _labelled(els, heads, me_names, inside):
+    current, depth, msgs, others = None, 0, [], {}
     head_ids = {id(h) for h in heads}
     for e in els:
         if id(e) in head_ids:
-            current = e.name[:-1].strip()
+            current, depth = e.name[:-1].strip(), e.depth
             continue
+        if inside and current is not None and e.depth <= depth:  # walked out of the labelled group
+            current = None
         if current is None or e.type != "TextControl" or is_noise(e.name) or len(e.name) < 2:
             continue
         mine = current in ("You", "Me") or current in me_names

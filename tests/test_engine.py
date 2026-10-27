@@ -29,18 +29,21 @@ def echo():
 
 
 def reader():
-    def g(name):
-        return El("GroupControl", name, (0, 0, 0, 0), 1)
+    def g(name, depth=1):
+        return El("GroupControl", name, (0, 0, 0, 0), depth)
 
-    def t(name):
-        return El("TextControl", name, (0, 0, 0, 0), 2)
-    # Chrome exposes each message twice: the paragraph, then the text inside it.
+    def t(name, depth=2):
+        return El("TextControl", name, (0, 0, 0, 0), depth)
+    # Chrome exposes each message twice: the paragraph, then the text inside it. After the chat comes page text
+    # outside any group, like the message box's label and browser buttons.
     els = [g("Dave the tiler:"), t("Quote attached"), t("Quote attached"), t("$4,000 all up"), t("$4,000 all up"),
-           g("You:"), t("bit steep mate"), t("bit steep mate")]
+           g("You:"), t("bit steep mate"), t("bit steep mate"), t("Message Dave", 1), t("Create split view", 0)]
     contact, msgs = labelled(els, [])
     check("labelled: finds the contact", contact == "Dave the tiler", contact)
-    check("labelled: each message once", len(msgs) == 3, str(len(msgs)))
+    check("labelled: each message once, nothing from outside the groups", len(msgs) == 3, str(len(msgs)))
     check("labelled: You is Me", msgs[-1].who == "me" and msgs[-1].name == "Me")
+    beside = [g("Dave:", 3), t("hi there", 3), g("You:", 3), t("hey dave", 3)]  # labels next to, not around
+    check("labelled: labels beside the messages still work", len(labelled(beside, [])[1]) == 2)
     check("labelled: no labels, no result", labelled([t("hello there")], []) is None)
 
 
