@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roverlay settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header class="top">
+    <img class="logo" src="logo.png" alt="" width="28" height="28">
+    <h1>Roverlay</h1>
+    <span id="version" class="version"></span>
+  </header>
+
+  <main id="content" class="content">
+    <section aria-labelledby="h-shortcut">
+      <h2 id="h-shortcut" class="label">Shortcut</h2>
+      <div class="group">
+        <div class="row">
+          <span class="row-text"><span class="row-title">Open the reply bar</span></span>
+          <span id="hotkey" class="hotkey" aria-live="polite"></span>
+          <button id="changeHotkey" class="btn" type="button">Change</button>
+        </div>
+      </div>
+      <p id="hotkeyError" class="note error" role="alert" hidden></p>
+    </section>
+
+    <section aria-labelledby="h-model">
+      <h2 id="h-model" class="label">Model</h2>
+      <div id="models" class="models" role="radiogroup" aria-labelledby="h-model"></div>
+      <p id="modelError" class="note error" role="alert" hidden></p>
+    </section>
+
+    <section aria-labelledby="h-memory">
+      <h2 id="h-memory" class="label">Voice memory</h2>
+      <div class="group">
+        <label class="row switch-row">
+          <span class="row-text"><span class="row-title">Learn my tone from each chat</span></span>
+          <input id="memoryEnabled" class="switch" type="checkbox" role="switch">
+        </label>
+        <div class="row">
+          <span class="row-text"><span class="row-sub">Saved as plain text in <span id="memoryFolder" class="path"></span></span></span>
+          <button id="openFolder" class="btn" type="button">Open folder</button>
+        </div>
+        <ul id="contacts" class="contacts" aria-label="Saved chats"></ul>
+        <div class="row">
+          <span id="forgetNote" class="row-text row-sub" aria-live="polite"></span>
+          <button id="forget" class="btn danger" type="button">Forget everything</button>
+        </div>
+      </div>
+      <p id="memoryError" class="note error" role="alert" hidden></p>
+    </section>
+
+    <section aria-labelledby="h-general">
+      <h2 id="h-general" class="label">General</h2>
+      <div class="group">
+        <label class="row switch-row">
+          <span class="row-text"><span class="row-title">Start Roverlay when Windows starts</span></span>
+          <input id="launchAtStartup" class="switch" type="checkbox" role="switch">
+        </label>
+        <label class="row switch-row">
+          <span class="row-text">
+            <span class="row-title">Paused</span>
+            <span class="row-sub">The shortcut won't open the bar while this is on.</span>
+          </span>
+          <input id="paused" class="switch" type="checkbox" role="switch">
+        </label>
+      </div>
+      <p id="generalError" class="note error" role="alert" hidden></p>
+    </section>
+
+    <details class="advanced">
+      <summary class="label">Advanced</summary>
+      <div class="group">
+        <div class="row stack">
+          <label class="row-title" for="myNames">Names you use in Slack, Discord, group chats</label>
+          <input id="myNames" class="text" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Alex, alexw, Al" aria-describedby="namesHelp">
+          <span id="namesHelp" class="row-sub">Usually detected automatically. Add names here if your own messages get labelled as someone else's. Separate them with commas.</span>
+        </div>
+      </div>
+      <p id="namesNote" class="note" aria-live="polite" hidden></p>
+    </details>
+  </main>
+
+  <footer class="footer">
+    <span>Everything runs on this PC. Nothing is sent anywhere.</span>
+    <button id="done" class="btn primary" type="button">Done</button>
+  </footer>
+
+  <script src="settings.js"></script>
+</body>
+</html>

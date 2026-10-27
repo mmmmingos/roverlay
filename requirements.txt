@@ -1,0 +1,8 @@
+pywebview>=6.2
+pywin32>=306
+uiautomation>=2.0.20
+comtypes>=1.4
+psutil>=5.9
+pyperclip>=1.9
+pystray>=0.19
+Pillow>=10.0

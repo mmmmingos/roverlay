@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mock chat test</title>
+<style>
+  body { font: 15px "Segoe UI", sans-serif; background: #0b141a; color: #e9edef; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+  #msgs { flex: 1; padding: 20px 40px; overflow: auto; }
+  .m { max-width: 60%; padding: 8px 12px; border-radius: 8px; margin: 6px 0; }
+  .them { background: #202c33; }
+  .me { background: #005c4b; margin-left: auto; }
+  #box { margin: 12px 40px 20px; padding: 10px 14px; border-radius: 8px; background: #2a3942; min-height: 22px; outline: none; white-space: pre-wrap; }
+  #sent { margin: 0 40px 12px; color: #f15c6d; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div id="msgs">
+    <div class="m them">Dave: Thanks for having me today. Quote attached. All up $4,000 inc GST, you supply tiles</div>
+    <div class="m me">thanks dave, will have a look tonight</div>
+    <div class="m them">Dave: All good. I've got a gap in 2 weeks if you want to lock it in, otherwise I'm booked till Feb</div>
+  </div>
+  <div id="sent" aria-label="send detector">no Enter pressed</div>
+  <div id="box" contenteditable="true" role="textbox" aria-label="Type a message to Dave"></div>
+  <script>
+    // A real chat sends on a bare Enter. This page only counts them, so a test can prove none happened.
+    let n = 0;
+    document.getElementById("box").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); n++; document.getElementById("sent").textContent = `BARE ENTER PRESSED ${n} TIMES (would have sent)`; }
+    });
+  </script>
+</body>
+</html>

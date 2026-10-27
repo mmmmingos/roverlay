@@ -1,0 +1,214 @@
+/* The reply bar. Tokens, sizes and type follow DigUp's search panel (MIT, (c) 2026 Abdur Rahim,
+   github.com/ARahim3/DigUp shell/ui/panel.css): 780 px wide, a 56 px field, 18 px corners, amber accents. */
+
+:root {
+  --amber: #f2a22a;
+  --ember: #d97b1a;
+  --surface: #fbfbfb;
+  --raised: #f2f2f4;
+  --text: #1d1d1f;
+  --secondary: #6e6e73;
+  --tertiary: #a1a1a6;
+  --line: rgba(0, 0, 0, 0.09);
+  --chip: rgba(0, 0, 0, 0.06);
+  --key: rgba(0, 0, 0, 0.07);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1f1f21;
+    --raised: #2a2a2d;
+    --text: #f2f2f7;
+    --secondary: #a1a1a6;
+    --tertiary: #6e6e73;
+    --line: rgba(255, 255, 255, 0.1);
+    --chip: rgba(255, 255, 255, 0.09);
+    --key: rgba(255, 255, 255, 0.1);
+    --ember: #f2a22a;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+/* The window is transparent: the panel's rounded corners and shadow are drawn here, anti-aliased, inside a
+   --shadow-room margin. (Cutting the window itself to a rounded shape gave jagged, stepped corners.) */
+html, body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+:root { --shadow-room: 28px; }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  margin: var(--shadow-room);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28), 0 3px 10px rgba(0, 0, 0, 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  .panel {
+    /* A faint top highlight and a near-black outline read as glass on a dark desktop, like Spotlight. */
+    background: linear-gradient(180deg, #262629 0%, var(--surface) 56px);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 22px 56px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Enter with nothing to do: a small sideways nudge, like a macOS password field. */
+.panel.nudge { animation: nudge 260ms ease-in-out; }
+@keyframes nudge {
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+/* Spotlight-style entrance: a quick fade and a few pixels' drop. */
+.panel.appear { animation: appear 140ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes appear {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The field */
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 56px;
+  flex: none;
+  padding: 0 14px 0 18px;
+}
+
+.spark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  fill: none;
+  stroke: var(--ember);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.busy .spark { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+#ask {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 20px;
+}
+
+#ask::placeholder { color: var(--tertiary); }
+
+.context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(260px, 36%);
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(242, 162, 42, 0.14);
+  color: var(--ember);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context.warn { background: var(--chip); color: var(--secondary); }
+
+/* The draft */
+
+.body {
+  border-top: 1px solid var(--line);
+  padding: 12px 14px 12px 18px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tertiary);
+  margin: 0 0 6px;
+}
+
+#draft {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  max-height: 220px;
+  resize: none;
+  border: 0;
+  outline: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  user-select: text;
+  overflow-y: auto;
+}
+
+#draft:focus { box-shadow: 0 0 0 2px rgba(242, 162, 42, 0.45); }
+
+/* The footer */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 30px;
+  flex: none;
+  padding: 0 16px;
+  font-size: 11px;
+  color: var(--secondary);
+  border-top: 1px solid var(--line);
+}
+
+.keys { display: flex; gap: 12px; white-space: nowrap; flex: none; }
+
+/* One line, always: at chat-column widths a long rewrite preview wrapped and spilled out of the footer. */
+#status {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+kbd {
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--key);
+  color: var(--text);
+  margin-right: 3px;
+}

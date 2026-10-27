@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dave the tiler</title>
+<!-- A staged chat for tests and the demo recording: made-up people, no real app's branding. -->
+<style>
+  :root { --bg: #0e1116; --panel: #151a21; --them: #1f2630; --me: #2c4a3e; --text: #e8edf2; --muted: #8b96a3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100vh; display: flex; background: var(--bg); color: var(--text);
+         font: 15px/1.45 "Segoe UI Variable Text", "Segoe UI", sans-serif; }
+  aside { width: 300px; background: var(--panel); border-right: 1px solid #222a33; padding: 18px 0; }
+  aside h1 { font-size: 18px; margin: 0 20px 14px; }
+  .row { display: flex; gap: 12px; align-items: center; padding: 10px 20px; color: var(--muted); }
+  .row.on { background: #1d2530; color: var(--text); }
+  .av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #0e1116; }
+  main { flex: 1; display: flex; flex-direction: column; }
+  header { display: flex; gap: 12px; align-items: center; padding: 14px 28px; border-bottom: 1px solid #222a33; background: var(--panel); }
+  header b { font-size: 16px; }
+  header span { color: var(--muted); font-size: 13px; }
+  #msgs { flex: 1; padding: 24px 60px; overflow: auto; display: flex; flex-direction: column; gap: 8px; justify-content: flex-end; }
+  .m { max-width: 58%; padding: 9px 13px; border-radius: 12px; }
+  .them { background: var(--them); align-self: flex-start; border-top-left-radius: 4px; }
+  .me { background: var(--me); align-self: flex-end; border-top-right-radius: 4px; }
+  .t { display: block; text-align: right; color: var(--muted); font-size: 11px; margin-top: 2px; }
+  footer { padding: 14px 60px 22px; background: var(--bg); }
+  #box { padding: 12px 16px; border-radius: 22px; background: var(--them); min-height: 22px; outline: none; white-space: pre-wrap; }
+  #box:empty::before { content: "Message Dave"; color: var(--muted); }
+  #sent { color: #f15c6d; font-size: 12px; margin: 0 0 6px 6px; height: 16px; }
+</style>
+</head>
+<body>
+  <aside>
+    <h1>Chats</h1>
+    <div class="row on"><div class="av" style="background:#f2a22a">D</div><div>Dave the tiler<br><small>All good. I've got a gap…</small></div></div>
+    <div class="row"><div class="av" style="background:#7fb3d5">P</div><div>Priya (property)<br><small>Inspection all done…</small></div></div>
+    <div class="row"><div class="av" style="background:#a3d9a5">J</div><div>Josh<br><small>bucks is locked in</small></div></div>
+  </aside>
+  <main>
+    <header><div class="av" style="background:#f2a22a">D</div><div><b>Dave the tiler</b><br><span>online</span></div></header>
+    <div id="msgs">
+      <div class="m them">Thanks for having me today. Quote attached. All up $4,000 inc GST for strip out, waterproofing, screed and tiling floor + shower walls<span class="t">4:12 pm</span></div>
+      <div class="m me">thanks dave, will have a look tonight<span class="t">4:20 pm</span></div>
+      <div class="m them">All good. I've got a gap in 2 weeks if you want to lock it in, otherwise I'm booked till Feb<span class="t">6:41 pm</span></div>
+    </div>
+    <footer>
+      <div id="sent" aria-label="send detector"></div>
+      <div id="box" contenteditable="true" role="textbox" aria-label="Message Dave"></div>
+    </footer>
+  </main>
+  <script>
+    // A real chat sends on a bare Enter. This page only flags it, so tests can prove it never happens.
+    let n = 0;
+    document.getElementById("box").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); n++; document.getElementById("sent").textContent = `bare Enter pressed ${n}x (a real chat would have sent)`; }
+    });
+  </script>
+</body>
+</html>
