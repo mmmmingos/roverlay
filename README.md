@@ -10,7 +10,7 @@ The name is short for "reply overlay".
 
 ![Roverlay demo: press Ctrl+Shift+Space in a chat, type what you want to say, and the reply writes itself into the message box](docs/demo.gif)
 
-<sub>The demo is a staged chat page with made-up people, recorded with the real app. [MP4 version](docs/demo.mp4).</sub>
+<sub>The demo is a staged chat page with made-up people, recorded with the real app. [MP4 version with sound](docs/demo.mp4).</sub>
 
 > Roverlay is an early prototype that I built for my own use. It runs on Windows only. I share it as-is and maintain it occasionally.
 
