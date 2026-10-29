@@ -3,7 +3,7 @@
 Needs Roverlay running with its log going to tests/roverlay.log:
     .venv/Scripts/python.exe -u -m roverlay --background > tests/roverlay.log 2>&1
 Then: .venv/Scripts/python.exe scripts/record_demo.py
-Writes docs/demo.mp4 and docs/demo.gif. Takes over the keyboard and screen for about 30 seconds.
+Writes docs/demo.mp4. Takes over the keyboard and screen for about 30 seconds.
 """
 import ctypes
 import ctypes.wintypes
@@ -184,11 +184,8 @@ def main():
     pattern = str(frames / "f%05d.jpg")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", pattern, "-c:v", "libx264",
                     "-pix_fmt", "yuv420p", "-crf", "23", "-movflags", "+faststart", str(docs / "demo.mp4")], check=True)
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", pattern, "-vf",
-                    "fps=12,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer",
-                    str(docs / "demo.gif")], check=True)
     shutil.rmtree(frames)
-    print(f"{rec.count} frames; wrote docs/demo.mp4 and docs/demo.gif")
+    print(f"{rec.count} frames; wrote docs/demo.mp4")
 
 
 if __name__ == "__main__":

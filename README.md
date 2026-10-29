@@ -8,9 +8,9 @@ Roverlay is a free, open-source Windows app that drafts chat replies with a loca
 
 The name is short for "reply overlay".
 
-![Roverlay demo: press Ctrl+Shift+Space in a chat, type what you want to say, and the reply writes itself into the message box](docs/demo.gif)
+https://github.com/user-attachments/assets/14ec2ca8-1447-485a-9d5c-b721a147b87e
 
-<sub>The demo is a staged chat page with made-up people, recorded with the real app. [MP4 version with sound](docs/demo.mp4).</sub>
+<sub>Press <code>Ctrl+Shift+Space</code> in a chat, type what you want to say, and the reply writes itself into the message box. The chats in the demo are staged, with made-up people.</sub>
 
 > Roverlay is an early prototype that I built for my own use. It runs on Windows only. I share it as-is and maintain it occasionally.
 
